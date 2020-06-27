@@ -1,0 +1,6 @@
+.vscode
+hengster
+*.o
+*.a
+*.so
+img_stripper
