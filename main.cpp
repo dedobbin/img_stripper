@@ -242,7 +242,6 @@ int main(int argc, char* argv[])
 
 	cv::Mat img;
 	Raw_wave* wav = NULL;
-	uint8_t* raw_data = NULL;
 	
 	if (param_types.input == param_type_enum::IMG){
 		img = cv::imread(input_path);
@@ -257,7 +256,4 @@ int main(int argc, char* argv[])
 		}
 
 	destroy_wave(&wav);
-	if (raw_data){
-		free(raw_data);
-	}
 }
