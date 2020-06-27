@@ -130,9 +130,6 @@ void save_mat_as_wav(cv::Mat img, std::string output_path)
 	//In a perfect world this would be dynamic but then should get rid of Vec3b in this function
 	int img_channels = 3;
 	Raw_wave* wav = create_header(41100, 24, 1);
-
-	std::cout << "Input: img (" << mat_str(img) << ")" << std::endl; 
-	std::cout << "Ouput: wav (" << wav_str(wav) << ")" << std::endl;
  
 	uint8_t* buffer = (uint8_t*)malloc(img.cols * img.rows * img_channels);	//expects 24bit pixels
 	uint8_t* ptr = buffer;
@@ -144,16 +141,21 @@ void save_mat_as_wav(cv::Mat img, std::string output_path)
 		}
 	}
 	wav->data_chunk->audiodata = buffer;
-	set_datasize(wav, img.cols * img.rows);
+	set_datasize(wav, img.cols * img.rows * 3);
+
+	std::cout << "Input: img (" << mat_str(img) << ")" << std::endl; 
+	std::cout << "Ouput: wav (" << wav_str(wav) << ")" << std::endl;
+
 	write_wave(wav, output_path.c_str());
 }
 
 void save_wav_as_img(Raw_wave* wav, int w, int h, std::string output_path)
-{
-	cv::Mat img(h, w, CV_8UC3, wav->data_chunk->audiodata);
-
-	std::cout << "Input: img (" << mat_str(img) << ")" << std::endl; 
-	std::cout << "Ouput: wav (" << wav_str(wav) << ")" << std::endl;
+{	
+	//TODO: handle if not enough or too much data
+	cv::Mat img = cv::Mat(h, w, CV_8UC3, wav->data_chunk->audiodata);
+	
+	std::cout << "Input: wav (" << wav_str(wav) << ")" << std::endl;
+	std::cout << "Output: img (" << mat_str(img) << ")" << std::endl; 
 
 	cv::imwrite(output_path, img);
 }
@@ -180,6 +182,7 @@ std::pair<int, int> get_dimensions(std::string in)
 		std::cout << "Malformed image dimension param" << std::endl;
 		exit(MALFORMED_DIMENSION_PARAM);
 	}
+
 	return res;
 }
 
@@ -223,15 +226,15 @@ int main(int argc, char* argv[])
 	
 	if (param_types.input == param_type_enum::IMG){
 		img = cv::imread(input_path);
-		if (param_types.output == param_type_enum::WAV){
-			save_mat_as_wav(img, output_path);
-		}
 	} else if (param_types.input == param_type_enum::WAV){
 		load_wave(&wav, input_path.c_str());
-		if (param_types.output == param_type_enum::IMG){
-			save_wav_as_img(wav, dimensions.first, dimensions.second, output_path);
-		}
 	}
+
+	if (param_types.output == param_type_enum::WAV){
+		save_mat_as_wav(img, output_path);
+	} else if (param_types.output == param_type_enum::IMG){
+		save_wav_as_img(wav, dimensions.first, dimensions.second, output_path);
+		}
 
 	destroy_wave(&wav);
 	if (raw_data){
