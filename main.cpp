@@ -19,6 +19,7 @@
 #define ERROR_UNSUPPORTED_WAV 4
 #define ERROR_INVALID_IMAGE_DIMENSIONS 5
 #define ERROR_LOAD_MEDIA_FAIL 6
+#define ERROR_WRITE_MEDIA_FAIL 7
 
 extern "C" {
 	#include <wav_hammer/wav_hammer.h>
@@ -124,7 +125,7 @@ std::string wav_str(Raw_wave* wav)
 	return "bitdepth: " + std::to_string(bits_per_sample(wav)) + ", " + std::to_string(num_channels(wav)) + " channel(s), " + std::to_string(num_samples(wav)) + " samples";
 }
 
-void save_mat_as_wav(cv::Mat img, std::string output_path)
+bool save_mat_as_wav(cv::Mat img, std::string output_path)
 {
 	//In a perfect world this would be dynamic but then should get rid of Vec3b in this function
 	int img_channels = 3;
@@ -139,16 +140,17 @@ void save_mat_as_wav(cv::Mat img, std::string output_path)
 			ptr += img_channels;
 		}
 	}
+
 	wav->data_chunk->audiodata = buffer;
 	set_datasize(wav, img.cols * img.rows * 3);
 
 	std::cout << "Input: img (" << mat_str(img) << ")" << std::endl; 
 	std::cout << "Ouput: wav (" << wav_str(wav) << ")" << std::endl;
 
-	write_wave(wav, output_path.c_str());
+	return write_wave(wav, output_path.c_str()) > 0;
 }
 
-void save_wav_as_img(Raw_wave* wav, int w, int h, std::string output_path)
+bool save_wav_as_img(Raw_wave* wav, int w, int h, std::string output_path)
 {	
 	if (bits_per_sample(wav) / 8 != 3){
 		std::cout << "Currently only supports wavs with 24bit samples" << std::endl;
@@ -174,7 +176,7 @@ void save_wav_as_img(Raw_wave* wav, int w, int h, std::string output_path)
 	std::cout << "Input: wav (" << wav_str(wav) << ")" << std::endl;
 	std::cout << "Output: img (" << mat_str(img) << ")" << std::endl; 
 
-	cv::imwrite(output_path, img);
+	return cv::imwrite(output_path, img);
 }
 
 std::pair<int, int> get_dimensions(std::string in)
@@ -232,7 +234,7 @@ input_t parse_params(int argc, char* argv[])
 	}
 
 	if (param_types.input == param_types.output){
-		std::cout << "Invalid params, input and output is same type (based on extensions)" << std::endl;
+		std::cout << "Invalid params, input and output is same media type (based on extensions)" << std::endl;
 		exit(ERROR_INVALID_PARAMS);
 	}
 
@@ -246,7 +248,6 @@ input_t parse_params(int argc, char* argv[])
 	}
 
 	return {input_path, output_path, param_types, dimensions};
-
 }
 
 int main(int argc, char* argv[])
@@ -260,24 +261,31 @@ int main(int argc, char* argv[])
 	param_types_t param_types = input.param_types;
 	std::pair<int, int> output_image_dimensions = input.output_image_dimensions;
 
+	bool load_success = false;
 	if (param_types.input == param_type_enum::IMG){
 		img = cv::imread(input_path);
-		if(img.empty()){
-    		std::cout << "Failed to load " << input_path << std::endl;
-			exit(ERROR_LOAD_MEDIA_FAIL);
-		}
+		load_success = !img.empty();
 	} else if (param_types.input == param_type_enum::WAV){
-		if (!load_wave(&wav, input_path.c_str())){
-			std::cout << "Failed to load " << input_path << std::endl;
-			exit(ERROR_LOAD_MEDIA_FAIL);
-		}
+		load_success = load_wave(&wav, input_path.c_str()) > 0;
 	}
 
+	if (!load_success){
+		std::cout << "Failed to load " << input_path << std::endl;
+		exit(ERROR_LOAD_MEDIA_FAIL);
+	}
+
+	bool write_succes = false;
 	if (param_types.output == param_type_enum::WAV){
-		save_mat_as_wav(img, output_path);
+		write_succes = save_mat_as_wav(img, output_path);
 	} else if (param_types.output == param_type_enum::IMG){
-		save_wav_as_img(wav, output_image_dimensions.first, output_image_dimensions.second, output_path);
+		write_succes = save_wav_as_img(wav, output_image_dimensions.first, output_image_dimensions.second, output_path);
+	}
+
+	if (!write_succes){
+		std::cout << "Failed to write " << output_path << std::endl;
+		exit(ERROR_WRITE_MEDIA_FAIL);
 	}
 
 	destroy_wave(&wav);
+	return 0;
 }
