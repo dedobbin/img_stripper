@@ -161,8 +161,12 @@ void save_wav_as_img(Raw_wave* wav, int w, int h, std::string output_path)
 	int wav_data_size = datasize(wav);
 	int expected_data_size = w * h * (bits_per_sample(wav) / 8);
 	if (wav_data_size < expected_data_size){
-		std::cout << "Not enough data for image size" << std::endl;
-		//TODO: print optimal dimensions
+		if (wav_data_size < w * 3){
+			std::cout << "Not enough data for image size,try smaller width" << std::endl;
+		} else {
+			int proposed_h = wav_data_size / (w * 3);
+			std::cout << "Not enough data for image size, try height " << proposed_h << " or smaller width" << std::endl;
+		}
 		exit(INVALID_IMAGE_DIMENSIONS);
 	} else if (wav_data_size > expected_data_size){
 		std::cout << "Too much data for image size, "<< wav_data_size - expected_data_size << " bytes lost" << std::endl;
