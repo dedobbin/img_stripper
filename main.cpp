@@ -16,6 +16,7 @@
 #define ERROR_INVALID_PARAMS 1
 #define MALFORMED_DIMENSION_PARAM 2
 #define UNSUPPORTED_TYPE 3
+#define UNSUPPORTED_WAV 4
 
 extern "C" {
 	#include <wav_hammer/wav_hammer.h>
@@ -151,7 +152,13 @@ void save_mat_as_wav(cv::Mat img, std::string output_path)
 
 void save_wav_as_img(Raw_wave* wav, int w, int h, std::string output_path)
 {	
+	if (bits_per_sample(wav) / 8 != 3){
+		std::cout << "Currently only supports wavs with 24bit samples" << std::endl;
+		exit(UNSUPPORTED_WAV);
+	}
+
 	//TODO: handle if not enough or too much data
+
 	cv::Mat img = cv::Mat(h, w, CV_8UC3, wav->data_chunk->audiodata);
 	
 	std::cout << "Input: wav (" << wav_str(wav) << ")" << std::endl;
