@@ -17,6 +17,7 @@
 #define MALFORMED_DIMENSION_PARAM 2
 #define UNSUPPORTED_TYPE 3
 #define UNSUPPORTED_WAV 4
+#define INVALID_IMAGE_DIMENSIONS 5
 
 extern "C" {
 	#include <wav_hammer/wav_hammer.h>
@@ -157,7 +158,15 @@ void save_wav_as_img(Raw_wave* wav, int w, int h, std::string output_path)
 		exit(UNSUPPORTED_WAV);
 	}
 
-	//TODO: handle if not enough or too much data
+	int wav_data_size = datasize(wav);
+	int expected_data_size = w * h * (bits_per_sample(wav) / 8);
+	if (wav_data_size < expected_data_size){
+		std::cout << "Not enough data for image size" << std::endl;
+		//TODO: print optimal dimensions
+		exit(INVALID_IMAGE_DIMENSIONS);
+	} else if (wav_data_size > expected_data_size){
+		std::cout << "Too much data for image size, "<< wav_data_size - expected_data_size << " bytes lost" << std::endl;
+	}
 
 	cv::Mat img = cv::Mat(h, w, CV_8UC3, wav->data_chunk->audiodata);
 	
