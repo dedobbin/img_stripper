@@ -14,10 +14,10 @@
 
 
 #define ERROR_INVALID_PARAMS 1
-#define MALFORMED_DIMENSION_PARAM 2
-#define UNSUPPORTED_TYPE 3
-#define UNSUPPORTED_WAV 4
-#define INVALID_IMAGE_DIMENSIONS 5
+#define ERROR_MALFORMED_DIMENSION_PARAM 2
+#define ERROR_UNSUPPORTED_TYPE 3
+#define ERROR_UNSUPPORTED_WAV 4
+#define ERROR_INVALID_IMAGE_DIMENSIONS 5
 
 extern "C" {
 	#include <wav_hammer/wav_hammer.h>
@@ -155,7 +155,7 @@ void save_wav_as_img(Raw_wave* wav, int w, int h, std::string output_path)
 {	
 	if (bits_per_sample(wav) / 8 != 3){
 		std::cout << "Currently only supports wavs with 24bit samples" << std::endl;
-		exit(UNSUPPORTED_WAV);
+		exit(ERROR_UNSUPPORTED_WAV);
 	}
 
 	int wav_data_size = datasize(wav);
@@ -167,7 +167,7 @@ void save_wav_as_img(Raw_wave* wav, int w, int h, std::string output_path)
 			int proposed_h = wav_data_size / (w * 3);
 			std::cout << "Not enough data for image size, try height " << proposed_h << " or smaller width" << std::endl;
 		}
-		exit(INVALID_IMAGE_DIMENSIONS);
+		exit(ERROR_INVALID_IMAGE_DIMENSIONS);
 	} else if (wav_data_size > expected_data_size){
 		std::cout << "Too much data for image size, "<< wav_data_size - expected_data_size << " bytes lost" << std::endl;
 	}
@@ -192,7 +192,7 @@ std::pair<int, int> get_dimensions(std::string in)
 		}
 	} catch (std::regex_error& e) {
 		std::cout << "Malformed image dimension param" << std::endl;
-		exit(MALFORMED_DIMENSION_PARAM);
+		exit(ERROR_MALFORMED_DIMENSION_PARAM);
 	}
 
 	std::pair<int, int> res = {0, 0};
@@ -200,7 +200,7 @@ std::pair<int, int> get_dimensions(std::string in)
 		res = {stoi(x) , stoi(y)};
 	} catch (const std::invalid_argument&) {
 		std::cout << "Malformed image dimension param" << std::endl;
-		exit(MALFORMED_DIMENSION_PARAM);
+		exit(ERROR_MALFORMED_DIMENSION_PARAM);
 	}
 
 	return res;
@@ -220,8 +220,20 @@ int main(int argc, char* argv[])
 	
 	param_types_t param_types = determine_param_types(input_path, output_path);
 
+	if (param_types.input == param_type_enum::UNSUPPORTED || param_types.output == param_type_enum::UNSUPPORTED){
+		std::cout << "Unsupported input type (based on file extensions): ";
+		if (param_types.input == param_type_enum::UNSUPPORTED  && param_types.output == param_type_enum::UNSUPPORTED){
+			std::cout << input_path << ", " << output_path << std::endl;
+		} else if (param_types.input == param_type_enum::UNSUPPORTED) {
+			std::cout << input_path << std::endl;
+		} else if (param_types.output == param_type_enum::UNSUPPORTED){
+			std::cout << output_path << std::endl;
+		}
+		exit(ERROR_UNSUPPORTED_TYPE);
+	}
+
 	if (param_types.input == param_types.output){
-		std::cout << "Invalid params, input and output is " << param_type_str.at(param_types.input) << std::endl;
+		std::cout << "Invalid params, input and output is same type (based on extensions)" << std::endl;
 		exit(ERROR_INVALID_PARAMS);
 	}
 
@@ -233,11 +245,6 @@ int main(int argc, char* argv[])
 		}
 		dimensions = get_dimensions(argv[3]);
 
-	}
-
-	if (param_types.input == param_type_enum::UNSUPPORTED || param_types.output == param_type_enum::UNSUPPORTED){
-		std::cout << "Unsupported input type (based on file extensions)" << std::endl;
-		exit(UNSUPPORTED);
 	}
 
 	cv::Mat img;
@@ -253,7 +260,7 @@ int main(int argc, char* argv[])
 		save_mat_as_wav(img, output_path);
 	} else if (param_types.output == param_type_enum::IMG){
 		save_wav_as_img(wav, dimensions.first, dimensions.second, output_path);
-		}
+	}
 
 	destroy_wave(&wav);
 }
