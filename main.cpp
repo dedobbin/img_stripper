@@ -18,6 +18,7 @@
 #define ERROR_UNSUPPORTED_TYPE 3
 #define ERROR_UNSUPPORTED_WAV 4
 #define ERROR_INVALID_IMAGE_DIMENSIONS 5
+#define ERROR_LOAD_MEDIA_FAIL 6
 
 extern "C" {
 	#include <wav_hammer/wav_hammer.h>
@@ -261,8 +262,15 @@ int main(int argc, char* argv[])
 
 	if (param_types.input == param_type_enum::IMG){
 		img = cv::imread(input_path);
+		if(img.empty()){
+    		std::cout << "Failed to load " << input_path << std::endl;
+			exit(ERROR_LOAD_MEDIA_FAIL);
+		}
 	} else if (param_types.input == param_type_enum::WAV){
-		load_wave(&wav, input_path.c_str());
+		if (!load_wave(&wav, input_path.c_str())){
+			std::cout << "Failed to load " << input_path << std::endl;
+			exit(ERROR_LOAD_MEDIA_FAIL);
+		}
 	}
 
 	if (param_types.output == param_type_enum::WAV){
