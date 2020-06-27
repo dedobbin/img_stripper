@@ -23,6 +23,28 @@ extern "C" {
 	#include <wav_hammer/wav_hammer.h>
 }
 
+static std::vector<std::string> validImgExtensions = {"jpg", "jpeg", "png", "tiff"};
+
+static std::string wav_extension = ".wav";
+
+enum param_type_enum {
+	UNSUPPORTED,
+	IMG,
+	WAV,
+};
+
+struct param_types_t{
+	param_type_enum input = param_type_enum::UNSUPPORTED;
+	param_type_enum output = param_type_enum::UNSUPPORTED;
+};
+
+struct input_t {
+	std::string input_path;
+	std::string output_path;
+	param_types_t param_types;
+	std::pair<int, int> output_image_dimensions;
+};
+
 Raw_wave* mat_to_wav(cv::Mat img)
 {
 	int img_channels = 3;
@@ -48,35 +70,10 @@ cv::Mat wav_to_mat(Raw_wave* wav, int w, int h)
 	return img;
 }
 
-
-static std::vector<std::string> validImgExtensions = {"jpg", "jpeg", "png", "tiff"};
-
-static std::string wav_extension = ".wav";
-
-
-enum param_type_enum {
-	UNSUPPORTED,
-	IMG,
-	WAV,
-};
-
-std::unordered_map <param_type_enum, std::string> param_type_str ={
-	{param_type_enum::IMG, "image"},
-	{param_type_enum::WAV, "wav"},
-};
-
-
-struct param_types_t{
-	param_type_enum input = param_type_enum::UNSUPPORTED;
-	param_type_enum output = param_type_enum::UNSUPPORTED;
-};
-
-
 bool has_suffix(const std::string &str, const std::string &suffix)
 {
     return str.size() >= suffix.size() && str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
-
 
 std::string to_lower(std::string in)
 {
@@ -86,7 +83,6 @@ std::string to_lower(std::string in)
 	}
 	return out;
 }
-
 
 param_types_t determine_param_types(std::string input_path, std::string output_path)
 {
@@ -205,14 +201,16 @@ std::pair<int, int> get_dimensions(std::string in)
 
 	return res;
 }
-
-int main(int argc, char* argv[])
-{	
-	//TODO: when loading and storing check if succeeded
+/**
+ * Returns struct of input params.
+ * output_image_dimensions is only set when output is image
+ */
+input_t parse_params(int argc, char* argv[])
+{
 	if (argc < 3){
 		std::cout << "Use params  'input file' 'output file'" << std::endl;
 		std::cout << "If output is image, also provide dimensions in format 'wxh' (example: input.wav output.img 320x640)";
-		return ERROR_INVALID_PARAMS;
+		exit(ERROR_INVALID_PARAMS);
 	}
 
 	std::string input_path = argv[1];
@@ -244,12 +242,23 @@ int main(int argc, char* argv[])
 			exit(ERROR_INVALID_PARAMS);
 		}
 		dimensions = get_dimensions(argv[3]);
-
 	}
 
+	return {input_path, output_path, param_types, dimensions};
+
+}
+
+int main(int argc, char* argv[])
+{	
 	cv::Mat img;
 	Raw_wave* wav = NULL;
 	
+	input_t input = parse_params(argc, argv);
+	std::string input_path = input.input_path;
+	std::string output_path = input.output_path;
+	param_types_t param_types = input.param_types;
+	std::pair<int, int> output_image_dimensions = input.output_image_dimensions;
+
 	if (param_types.input == param_type_enum::IMG){
 		img = cv::imread(input_path);
 	} else if (param_types.input == param_type_enum::WAV){
@@ -259,7 +268,7 @@ int main(int argc, char* argv[])
 	if (param_types.output == param_type_enum::WAV){
 		save_mat_as_wav(img, output_path);
 	} else if (param_types.output == param_type_enum::IMG){
-		save_wav_as_img(wav, dimensions.first, dimensions.second, output_path);
+		save_wav_as_img(wav, output_image_dimensions.first, output_image_dimensions.second, output_path);
 	}
 
 	destroy_wave(&wav);
