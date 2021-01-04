@@ -17,8 +17,7 @@ Dependencies are [SDL](https://wiki.libsdl.org/Installation) and [wav_hammer](ht
 (Partial [Fast Energetic Story Stepper](https://archive.org/details/uncopyrighted-music) converted to png)
 ##
 Image to audio:  
-![lena](https://nop.koindozer.org/gh/lena.png)  
-[to audio](https://nop.koindozer.org/gh/lena.wav)
+lena.png [to audio](https://nop.koindozer.org/gh/lena.wav)
 ## 
 A fun thing this tool allows you to do is converting an image, use an audio editor like Audacity to edit the audio file, and convert it back to an image again.
 For example, Lena with tweaked EQ.  
